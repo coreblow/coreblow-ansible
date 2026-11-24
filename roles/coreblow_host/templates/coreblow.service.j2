@@ -1,0 +1,30 @@
+[Unit]
+Description=CoreBlow Sovereign Autonomous Agent-OS Gateway Daemon
+Documentation=https://docs.coreblow.com
+After=network.target
+
+[Service]
+Type=simple
+User={{ coreblow_user }}
+Group={{ coreblow_group }}
+WorkingDirectory={{ coreblow_home }}
+Environment=NODE_ENV=production
+Environment=COREBLOW_GATEWAY_PORT={{ coreblow_gateway_port }}
+Environment=COREBLOW_GATEWAY_HOST={{ coreblow_gateway_host }}
+ExecStart=/usr/bin/env coreblow gateway start --port {{ coreblow_gateway_port }} --host {{ coreblow_gateway_host }}
+Restart=on-failure
+RestartSec=5s
+
+# Hardening & Sandboxing
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths={{ coreblow_config_dir }} /tmp
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

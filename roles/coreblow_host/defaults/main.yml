@@ -1,0 +1,14 @@
+---
+# CoreBlow Host Role Defaults
+coreblow_service_name: coreblow
+coreblow_user: coreblow
+coreblow_group: coreblow
+coreblow_home: /home/coreblow
+coreblow_config_dir: "{{ coreblow_home }}/.coreblow"
+coreblow_gateway_port: 18789
+coreblow_gateway_host: 127.0.0.1
+coreblow_version: "2.1.2"
+coreblow_node_major_version: 22
+coreblow_enable_ufw: true
+coreblow_systemd_enabled: true
+coreblow_healthcheck_timeout: 10

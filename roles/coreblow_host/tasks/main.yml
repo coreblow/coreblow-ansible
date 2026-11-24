@@ -1,11 +1,95 @@
-- name: Define CoreBlow service defaults
-  ansible.builtin.set_fact:
-    coreblow_service_name: coreblow
-    coreblow_gateway_port: 3000
+---
+# Tasks for CoreBlow Server Provisioning & Hardening Role
 
-- name: Validate gateway port
+- name: Validate CoreBlow gateway port
   ansible.builtin.assert:
     that:
       - coreblow_gateway_port | int > 0
       - coreblow_gateway_port | int < 65536
-    fail_msg: CoreBlow gateway port must be a valid TCP port.
+    fail_msg: "CoreBlow gateway port must be a valid TCP port (1-65535)."
+
+- name: Ensure dedicated CoreBlow system group exists
+  ansible.builtin.group:
+    name: "{{ coreblow_group }}"
+    state: present
+    system: true
+
+- name: Ensure dedicated CoreBlow service user exists
+  ansible.builtin.user:
+    name: "{{ coreblow_user }}"
+    group: "{{ coreblow_group }}"
+    home: "{{ coreblow_home }}"
+    shell: /bin/bash
+    create_home: true
+    system: true
+    state: present
+
+- name: Ensure CoreBlow state directory exists with strict 0700 permissions
+  ansible.builtin.file:
+    path: "{{ coreblow_config_dir }}"
+    state: directory
+    owner: "{{ coreblow_user }}"
+    group: "{{ coreblow_group }}"
+    mode: "0700"
+
+- name: Check installed Node.js version
+  ansible.builtin.command: node --version
+  register: node_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Verify or require Node.js 22+ runtime
+  when: node_version_check.rc != 0 or (node_version_check.stdout | regex_replace('^v', '') | int) < coreblow_node_major_version
+  block:
+    - name: Fail with guidance if Node.js 22+ is missing on managed host
+      ansible.builtin.fail:
+        msg: >
+          Node.js 22+ is required for CoreBlow Sovereign Agent-OS.
+          Detected version: {{ node_version_check.stdout | default('not found') }}.
+          Please provision Node 22 via NodeSource or host package manager.
+
+- name: Install CoreBlow CLI package globally
+  ansible.builtin.command: "npm install -g coreblow@{{ coreblow_version }}"
+  register: npm_install_res
+  changed_when: "'added' in npm_install_res.stdout or 'updated' in npm_install_res.stdout"
+  notify: restart coreblow
+
+- name: Deploy hardened CoreBlow systemd service unit
+  ansible.builtin.template:
+    src: coreblow.service.j2
+    dest: "/etc/systemd/system/{{ coreblow_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart coreblow
+
+- name: Configure UFW firewall rule for CoreBlow Gateway port
+  when: coreblow_enable_ufw | bool
+  block:
+    - name: Allow Gateway port 18789 in UFW
+      ansible.builtin.command: "ufw allow {{ coreblow_gateway_port }}/tcp comment 'CoreBlow Gateway'"
+      register: ufw_res
+      changed_when: "'Rule added' in ufw_res.stdout or 'Rule updated' in ufw_res.stdout"
+      failed_when: false
+
+- name: Ensure CoreBlow service is enabled and started
+  when: coreblow_systemd_enabled | bool
+  ansible.builtin.systemd:
+    name: "{{ coreblow_service_name }}"
+    state: started
+    enabled: true
+
+- name: Verify CoreBlow Gateway health status
+  ansible.builtin.uri:
+    url: "http://{{ coreblow_gateway_host }}:{{ coreblow_gateway_port }}/health"
+    method: GET
+    status_code: 200
+    timeout: "{{ coreblow_healthcheck_timeout }}"
+  register: gateway_health_result
+  until: gateway_health_result.status == 200
+  retries: 5
+  delay: 2
+  when: coreblow_systemd_enabled | bool
+  ignore_errors: true

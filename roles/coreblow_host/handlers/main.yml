@@ -1,0 +1,13 @@
+---
+# Handlers for coreblow_host role
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: "reload systemd"
+
+- name: Restart coreblow service
+  ansible.builtin.systemd:
+    name: "{{ coreblow_service_name }}"
+    state: restarted
+    daemon_reload: true
+  listen: "restart coreblow"

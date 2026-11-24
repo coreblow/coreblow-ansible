@@ -1,5 +1,6 @@
-- name: Install CoreBlow host baseline
+---
+- name: Provision and harden CoreBlow Sovereign Agent-OS host
   hosts: all
-  become: false
+  become: true
   roles:
     - coreblow_host

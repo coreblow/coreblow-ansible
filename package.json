@@ -1,0 +1,12 @@
+{
+  "name": "@coreblow/coreblow-ansible",
+  "version": "2.1.2",
+  "private": true,
+  "description": "Ansible roles and playbooks for provisioning hardened CoreBlow hosts",
+  "license": "MIT",
+  "author": "Febrinanda and CoreBlow contributors",
+  "type": "module",
+  "scripts": {
+    "test": "python3 scripts/check-ansible-role.py"
+  }
+}
