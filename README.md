@@ -1,3 +1,5 @@
+> **Archive Notice:** This deployment scaffold repository has been archived as part of CoreBlow fleet consolidation.
+
 # CoreBlow Ansible
 
 Idempotent server provisioning and OS-level hardening automation for CoreBlow Sovereign Agent-OS & Gateway.
